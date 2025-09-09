@@ -357,20 +357,20 @@ and SYSTEM on: <code>HKLM\SYSTEM</code></p>
 </code></pre>
 <p class="has-line-data" data-line-start="125" data-line-end="126">And with that, we’ll have a copy of the SAM and SYSTEM ready to be parsed to extract the hashes.</p>
 <h2 class="code-line" data-line-start=127 data-line-end=128 ><a id="Obteniendo_la_BootKey_127"></a>Getting the BootKey</h2>
-<p class="has-line-data" data-line-start="129" data-line-end="130">La BootKey es la llave dentro de SYSTEM usada para derivar la clave que protege los hashes. Se encuentra repartida entre 4 keys dentro del SYSTEM: <strong>JD</strong>, <strong>Skew1</strong>, <strong>GBG</strong> y <strong>Data</strong> .</p>
-<p class="has-line-data" data-line-start="131" data-line-end="132">Estas keys se encuentran dentro de la ruta del SYSTEM: <code>CurrentControlSet[NUMERO]\Control\Lsa\</code> y su informacion está almacenada en el atributo de la clase como un string Unicode</p>
-<p class="has-line-data" data-line-start="133" data-line-end="134">El proceso de extracción es el siguiente:</p>
+<p class="has-line-data" data-line-start="129" data-line-end="130">The BootKey is the key inside the SYSTEM hive used to derive the key that protects the password hashes. It’s split across four keys within SYSTEM: <strong>JD</strong>, <strong>Skew1</strong>, <strong>GBG</strong> and <strong>Data</strong>.</p>
+<p class="has-line-data" data-line-start="131" data-line-end="132">These keys are located under the SYSTEM path:  <code>CurrentControlSet[NUMERO]\Control\Lsa\</code> and their information is stored in the key’s class attribute as a Unicode string.</p>
+<p class="has-line-data" data-line-start="133" data-line-end="134">The extraction process works as follows:</p>
 <ol>
-<li class="has-line-data" data-line-start="135" data-line-end="136">Abrimos el SYSTEM  y obtenemos el numero del ControlSet activo leyendo el valor de la llave en <code>Select\Current</code></li>
-<li class="has-line-data" data-line-start="136" data-line-end="141">Con este valor construimos el path exacto donde se encuentran las 4 keys: <code>ControlSet[VALOR]\Control\Lsa\JD</code><br>
+<li class="has-line-data" data-line-start="135" data-line-end="136">Open the SYSTEM hive and get the active ControlSet number by reading the value in <code>Select\Current</code></li>
+<li class="has-line-data" data-line-start="136" data-line-end="141">Using this number, construct the exact paths to the four keys: <code>ControlSet[VALOR]\Control\Lsa\JD</code><br>
 <code>ControlSet[VALOR]\Control\Lsa\Skew1</code><br>
 <code>ControlSet[VALOR]\Control\Lsa\GBG</code><br>
 <code>ControlSet[VALOR]\Control\Lsa\Data</code><br>
-Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG + Data</code> que es una secuencia de bytes en formato hexadecimal.</li>
-<li class="has-line-data" data-line-start="141" data-line-end="143">Esta secuencia de bytes aún no es la <strong>bootkey</strong>, Windows aplica una transformación a los bytes para obfuscar la llave final, la transformación es: <code>[8, 5, 4, 2, 11, 9, 13, 3, 0, 6, 1, 12, 14, 10, 15, 7]</code> Es decir, el byte 8 de la secuencia pasa a ser el primero, el byte 5 el segundo y así.</li>
+Concatenate their <em>class_name</em> values into a single string: <code>JD + Skew1 + GBG + Data</code> which is a byte sequence in hexadecimal format.</li>
+<li class="has-line-data" data-line-start="141" data-line-end="143">This byte sequence is not yet the <strong>BootKey</strong>, Windows applies a transformation to obfuscate the final key. The transformation is:: <code>[8, 5, 4, 2, 11, 9, 13, 3, 0, 6, 1, 12, 14, 10, 15, 7]</code> Meaning: byte 8 of the sequence becomes the first byte, byte 5 becomes the second, and so on.</li>
 </ol>
-<p class="has-line-data" data-line-start="143" data-line-end="144">Con la transformación aplicada ya tenemos la BootKey</p>
-<p class="has-line-data" data-line-start="145" data-line-end="146">La funcion <code>extract_system_bootkey</code> implementa los pasos anteriores, cada parte del paso está enumerada con comentarios:</p>
+<p class="has-line-data" data-line-start="143" data-line-end="144">Once this transformation is applied, we finally have the BootKey.</p>
+<p class="has-line-data" data-line-start="145" data-line-end="146">The function <code>extract_system_bootkey</code> implements these steps, with each part of the process annotated with comments:</p>
 <pre><code class="has-line-data" data-line-start="148" data-line-end="193">fn extract_system_bootkey(system_path: &amp;str) -&gt; Result&lt;[u8; 16], String&gt; {
 
     ///    (1)     ///
@@ -416,9 +416,9 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 }
 
 </code></pre>
-<h2 class="code-line" data-line-start=194 data-line-end=195 ><a id="Descifrando_los_hashes_NT_194"></a>Descifrando los hashes NT</h2>
-<p class="has-line-data" data-line-start="196" data-line-end="197">Los hashes en el SAM no están encriptados directamente con la BootKey, sino protegidos por otra clave llamada <strong>SAM Key</strong> que se deriva de la BootKey.</p>
-<p class="has-line-data" data-line-start="198" data-line-end="199">Para obtener la SAM Key, Windows toma el valor <code>F</code> que está en la ruta: <code>SAM\Domains\Account</code> del SAM que ya extraimos.</p>
+<h2 class="code-line" data-line-start=194 data-line-end=195 ><a id="Descifrando_los_hashes_NT_194"></a>Deciphering NT hashes</h2>
+<p class="has-line-data" data-line-start="196" data-line-end="197">The hashes in the SAM are not encrypted directly with the BootKey. Instead, they are protected by another key called the <strong>SAM Key</strong> which is derived from the BootKey.</p>
+<p class="has-line-data" data-line-start="198" data-line-end="199">To obtain the SAM key, Windows takes the <code>F</code> value located at: <code>SAM\Domains\Account</code> in the SAM we already extracted.</p>
 <pre><code class="has-line-data" data-line-start="200" data-line-end="236">    // 1) Read SAM file
     let mut buf = Vec::&lt;u8&gt;::new();
     let mut f = File::open(sam_path)
@@ -455,8 +455,8 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
     #[allow(non_snake_case)]
     let F_data = F?.data().expect(&quot;Couldn't extract data&quot;);
 </code></pre>
-<p class="has-line-data" data-line-start="236" data-line-end="237">Dentro de este valor, a partir de la posición <code>0x68</code>, se encuentra un atributo llamado <strong>Key0</strong>. Este dato está cifrado.</p>
-<p class="has-line-data" data-line-start="238" data-line-end="239">Desciframos este dato usando la <strong>BootKey</strong> como llave maestra, aplicando <strong>AES o RC4</strong> (dependiendo de la versión de Windows).  El resultado de ese descifrado es la <strong>SAM Key</strong>, que luego se usará para descifrar los hashes NT de las cuentas locales.</p>
+<p class="has-line-data" data-line-start="236" data-line-end="237">nside this value, starting at offset <code>0x68</code>, there is an attribute called <strong>Key0</strong>. This data is encrypted.</p>
+<p class="has-line-data" data-line-start="238" data-line-end="239">We decrypt this using the <strong>BootKey</strong> as the master key, applying <strong>AES o RC4</strong> (depending on the Windows version. The result of this decryption is the <strong>SAM Key</strong>, which will then be used to decrypt the NT hashes of local accounts.</p>
 <pre><code class="has-line-data" data-line-start="240" data-line-end="264">    let mut sam_key: Vec&lt;u8&gt; = vec![];
     match F_data {
         KeyValueData::Small(data) =&gt; {
@@ -481,30 +481,30 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
         _ =&gt; todo!()
     }
 </code></pre>
-<p class="has-line-data" data-line-start="265" data-line-end="266">Y ya con esto tenemos la llave maestra para descifrar los hashes.</p>
-<p class="has-line-data" data-line-start="267" data-line-end="268">Dentro de <code>Account</code> se encuentra una subllave <code>Users</code> que guarda toda la información de los usuarios como subllaves, con el RID (un numero identificador) del usuario como nombre de la subllave.</p>
-<p class="has-line-data" data-line-start="269" data-line-end="270">Cada una de esas subllaves tiene un valor <code>V</code> que guarda el cuerpo binario de la cuenta de usuario, en este cuerpo está valores como el nombre de la cuenta y el NT hash.</p>
-<p class="has-line-data" data-line-start="271" data-line-end="272">Para desencriptar el NT hash se sigue el siguiente proceso:</p>
+<p class="has-line-data" data-line-start="265" data-line-end="266">And with that, we now have the master key to decrypt the hashes.</p>
+<p class="has-line-data" data-line-start="267" data-line-end="268">Inside the <code>Account</code>, there's a subkey called <code>Users</code> which stores all user information as subkeys, named by the user’s RID (a unique identifier).</p>
+<p class="has-line-data" data-line-start="269" data-line-end="270">Each of these subkeys has a value <code>V</code> that contains the binary data of the user account. This binary blob includes values like the account name and the NT hash.</p>
+<p class="has-line-data" data-line-start="271" data-line-end="272">To decrypt the NT hash, the following process is used:</p>
 <ul>
-<li class="has-line-data" data-line-start="273" data-line-end="275">Extraer el blob <code>V</code> de la subclave del usuario y localizar dentro de él el NT hash cifrado.</li>
+<li class="has-line-data" data-line-start="273" data-line-end="275">Extraer the <code>V</code> blob from the user subkey and locate the encrypted NT hash inside it.</li>
 </ul>
 <ul>
 <li class="has-line-data" data-line-start="275" data-line-end="277">
-<p class="has-line-data" data-line-start="275" data-line-end="276">Usar la <strong>SAM Key</strong> junto con una salt incluida en el blob para descifrar con AES/RC4 el material cifrado del hash.</p>
+<p class="has-line-data" data-line-start="275" data-line-end="276">Use the <strong>SAM Key</strong> along with a salt included in the blob to decrypt the hash material using AES/RC4.</p>
 </li>
 <li class="has-line-data" data-line-start="277" data-line-end="279">
-<p class="has-line-data" data-line-start="277" data-line-end="278">Derivar dos claves DES a partir del RID del usuario.</p>
+<p class="has-line-data" data-line-start="277" data-line-end="278">Derive two DES keys from the user’s RID.</p>
 </li>
 <li class="has-line-data" data-line-start="279" data-line-end="281">
-<p class="has-line-data" data-line-start="279" data-line-end="280">Usar estas dos claves DES para descifrar los 16 bytes obtenidos en el paso anterior (primera mitad con la primera clave, segunda mitad con la segunda).</p>
+<p class="has-line-data" data-line-start="279" data-line-end="280">Use these two DES keys to decrypt the 16 bytes obtained in the previous step (first half with the first key, second half with the second key).</p>
 </li>
 <li class="has-line-data" data-line-start="281" data-line-end="283">
-<p class="has-line-data" data-line-start="281" data-line-end="282">Concatenar ambos resultados: el valor final son los 16 bytes del <strong>NT hash en claro</strong> del usuario.</p>
+<p class="has-line-data" data-line-start="281" data-line-end="282">Concatenate both results: the final value is the 16-byte NT hash of the user in cleartext.</p>
 </li>
 </ul>
-<p class="has-line-data" data-line-start="283" data-line-end="284">Y ya con esto tenemos los NT hashes descifrados para todas las cuentas.</p>
-<p class="has-line-data" data-line-start="285" data-line-end="286">El código que lidia con esta parte es un poco extenso para ponerlo aquí, puedes verlo en el repositorio dando click [aqui]</p>
-<p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: [link]. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
+<p class="has-line-data" data-line-start="283" data-line-end="284">And that’s it, we now have the decrypted NT hashes for all accounts.</p>
+<p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository: </p>
+<p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM and decrypts the NT hashes, can be downloaded from [link]. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
 
   </div>
