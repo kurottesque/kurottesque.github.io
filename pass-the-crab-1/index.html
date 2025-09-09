@@ -246,21 +246,114 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 
 </body>
 <style>
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Merriweather:wght@700&display=swap');
+
 html, body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 18px;              /* letra un poquito más grande */
+  line-height: 1.75;
   background-color: #0f111a !important;
   color: #b6b7be !important;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.page, .split-preview, .split-editor, .preview-html {
-  background-color: #0f111a !important;
-  color: #b6b7be !important;
+/* Contenedor central para que parezca blog legible */
+.container, .page, .preview-html {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+  background-color: transparent !important;
 }
 
-/* Títulos en rojo */
-h1, h2, h3, h4, h5, h6 {
+/* Encabezados con fuente "serif" y color rojo */
+h1,h2,h3,h4,h5,h6 {
+  font-family: "Merriweather", Georgia, "Times New Roman", serif;
   color: #89040a !important;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-top: 1.1rem;
 }
+
+/* Texto general */
+p, li, blockquote, td, th, caption, label, .title, .title-document {
+  color: #b6b7be !important;
+  font-size: 1.05rem;
+}
+
+/* Links más suaves */
+a { color: #9adbd6; text-decoration: underline; }
+a:hover { color: #c6fff9; }
+
+/* ===== Bloques de código: oscuro, menos "flash" ===== */
+pre, pre code, code, .hljs, .preview-html pre, .preview-html code {
+  background-color: #0b0c10 !important;     /* oscuro suave */
+  color: #e6e6e9 !important;                /* texto claro en code */
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6) inset;
+  padding: 0.8rem 1rem !important;
+  border-radius: 8px !important;
+  overflow: auto;
+  transition: background-color .25s ease, color .25s ease, box-shadow .25s ease;
+  font-family: "SFMono-Regular", Menlo, Monaco, "Roboto Mono", monospace !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Evitar blancos heredados de selectores específicos */
+pre[class], code[class], .pre-scrollable, .table .table {
+  background: #0b0c10 !important;
+  color: #e6e6e9 !important;
+}
+
+/* Reducir contraste brusco en inline code */
+code { background-color: rgba(255,255,255,0.02) !important; padding: 0.2rem 0.4rem; border-radius: 6px; }
+
+/* Animaciones suaves para evitar 'flash' al hacer scroll */
+* { transition: color .12s ease, background-color .12s ease; }
+
+/* Pequeños detalles visuales */
+hr { border-color: rgba(255,255,255,0.04); margin: 2rem 0; }
+blockquote { border-left: 3px solid rgba(137,4,10,0.15); padding-left: 1rem; color: #cfcfd3; background: rgba(255,255,255,0.01); border-radius: 6px; padding: 1rem; }
+
+/* Estilos del switch de idioma (se añadirá dinámicamente) */
+#lang-switcher {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.lang-btn {
+  background: rgba(255,255,255,0.03);
+  color: #b6b7be;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.lang-btn.active { background: linear-gradient(90deg, rgba(137,4,10,0.15), rgba(137,4,10,0.06)); color: #fff; border-color: rgba(137,4,10,0.25); }
+
+/* pequeño aviso */
+#translate-alert {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  display: none;
+  z-index: 9999;
+}
+
 </style>
 
 
