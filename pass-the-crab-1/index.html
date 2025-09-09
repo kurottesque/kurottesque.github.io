@@ -6,9 +6,40 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
 
 <script>hljs.highlightAll();</script>
+
 <div style="text-align: right; margin: 10px;">
-  <button id="lang-toggle">Español</button>
+  <button id="lang-toggle">
+    🇪🇸 Español
+  </button>
 </div>
+
+<style>
+  #lang-toggle {
+    background-color: #DC143C;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: background-color 0.3s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* espacio entre ícono y texto */
+  }
+
+  #lang-toggle:hover {
+    background-color: #C11235; 
+    transform: translateY(-2px);
+  }
+
+  #lang-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+</style>
+
   <div id="content-es" style="display:none;">
 <h1 class="code-line" data-line-start=0 data-line-end=1 ><a id="Pass-The-Crab-1"></a>Pass-The-Crab parte 1: Volcando el SAM y extrayendo credenciales del sistema</h1>
 <p class="has-line-data" data-line-start=0 data-line-end=1>Tags: <code>SAM, SYSTEM, AES, RC4, NT Hash, NTLM, Windows, Registry</code></p>
@@ -509,7 +540,7 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
     <img src="final.png"></img>
 <p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository:<a href="https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202">https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202</a><</p>
 <p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM, decrypts the NT hashes and print it on console, can be downloaded from <a href="https://github.com/kurottesque/crab-dump/">https://github.com/kurottesque/crab-dump/</a>. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
-<h2 class="code-line" data-line-start="288" data-line-end="289" ><a id="Conclusiones_0"></a>Conclusiones</h2>
+<h2 class="code-line" data-line-start="288" data-line-end="289" ><a id="Conclusiones_0"></a>Conclusions</h2>
     <p class="has-line-data" data-line-start="289" data-line-end="290">Manually extracting the NT hashes from Windows databases is not a trivial task, you can use well-known tools (secretsdump, mimikatz) who makes this works easy, but learning to do it from scratch helps you to better understand Windows security landscape. Many of the Windows transformations are <em>security through obscurity</em> that, even if is not secure at all, it makes it more difficult for an attacker, raising the knowledge bar necessary to accomplisth this task</p>
     <p class="has-line-data" data-line-start="290" data-line-end="291">In the next part, we'll see how to use this hashes to execute code under the user identity, and we will explore (and abuse) the <code>LSASS</code>, the Windows service in charge of authentication-related stuff.</p>
 
@@ -527,12 +558,12 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
       if (currentLang === "en") {
         enContent.style.display = "none";
         esContent.style.display = "block";
-        toggleBtn.textContent = "English";
+        toggleBtn.textContent = "🇬🇧 English";
         currentLang = "es";
       } else {
         enContent.style.display = "block";
         esContent.style.display = "none";
-        toggleBtn.textContent = "Español";
+        toggleBtn.textContent = "🇪🇸 Español";
         currentLang = "en";
       }
     });
