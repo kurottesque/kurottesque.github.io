@@ -254,10 +254,12 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 </li>
 </ul>
 <p class="has-line-data" data-line-start="283" data-line-end="284">Y ya con esto tenemos los NT hashes descifrados para todas las cuentas.</p>
+    <img src="final.png"></img>
     <p class="has-line-data" data-line-start="285" data-line-end="286">El código que lidia con esta parte es un poco extenso para ponerlo aquí, puedes verlo en el repositorio: <a href="https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202">https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202</a></p>
     <p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: <a href="https://github.com/kurottesque/crab-dump/">https://github.com/kurottesque/crab-dump/</a>. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
 <h2 class="code-line" data-line-start="288" data-line-end="289" ><a id="Conclusiones_0"></a>Conclusiones</h2>
-<p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
+    <p class="has-line-data" data-line-start="289" data-line-end="290">Extraer manualmente los hashes de las bases de Windows no es una tarea trivial, aunque se puede usar herramientas que facilitan este trabajo (secretsdump, Mimikatz), aprender cómo funciona nos ayuda a entender mejor el panorama de la seguridad en Windows. Mucha de las transformaciones que aplica Windows son <em>seguridad mediante obfuscación</em> que aunque no es del todo seguro, aumentan la dificultad para un atacante, levantando la barra de conocimiento necesario para lograrlo.</p>
+    <p class="has-line-data" data-line-start="290" data-line-end="291">En la siguiente parte, veremos como utilizar estos hashes para ejecutar código en la identidad de otro usuario, y exploraremos (y abusaremos) del <code>LSASS</code>, la parte de Windows encargada de todo lo relacionado con autenticación</p>
 </div>
   <div id="content-en">
 <h1 class="code-line" data-line-start=0 data-line-end=1 ><a id="Pass-The-Crab-1"></a>Pass-The-Crab part 1: Dumping the SAM and extracting system credentials</h1>
@@ -507,7 +509,9 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
     <img src="final.png"></img>
 <p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository:<a href="https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202">https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202</a><</p>
 <p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM, decrypts the NT hashes and print it on console, can be downloaded from <a href="https://github.com/kurottesque/crab-dump/">https://github.com/kurottesque/crab-dump/</a>. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
-<p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
+<h2 class="code-line" data-line-start="288" data-line-end="289" ><a id="Conclusiones_0"></a>Conclusiones</h2>
+    <p class="has-line-data" data-line-start="289" data-line-end="290">Manually extracting the NT hashes from Windows databases is not a trivial task, you can use well-known tools (secretsdump, mimikatz) who makes this works easy, but learning to do it from scratch helps you to better understand Windows security landscape. Many of the Windows transformations are <em>security through obscurity</em> that, even if is not secure at all, it makes it more difficult for an attacker, raising the knowledge bar necessary to accomplisth this task</p>
+    <p class="has-line-data" data-line-start="290" data-line-end="291">In the next part, we'll see how to use this hashes to execute code under the user identity, and we will explore (and abuse) the <code>LSASS</code>, the Windows service in charge of authentication-related stuff.</p>
 
   </div>
 
