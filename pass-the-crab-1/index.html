@@ -6,7 +6,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
 
 <script>hljs.highlightAll();</script>
-  <h1 class="code-line" data-line-start=0 data-line-end=1 ><a id="Pass-The-Crab-1"></a>Pass-The-Crab parte 1: Volcando el SAM y extrayendo credenciales del sistema</h1>
+<div style="text-align: right; margin: 10px;">
+  <button id="lang-toggle">Español</button>
+</div>
+  <div id="content-es" style="display:none;">
+<h1 class="code-line" data-line-start=0 data-line-end=1 ><a id="Pass-The-Crab-1"></a>Pass-The-Crab parte 1: Volcando el SAM y extrayendo credenciales del sistema</h1>
 <p class="has-line-data" data-line-start=0 data-line-end=1>Tags: <code>SAM, SYSTEM, AES, RC4, NT Hash, NTLM, Windows, Registry</code></p>
 <h2 class="code-line" data-line-start=0 data-line-end=1 ><a id="Introduccion_0"></a>Introduccion</h2>
 <p class="has-line-data" data-line-start="2" data-line-end="3">En un servidor de Discord fue publicado un reto:</p>
@@ -253,6 +257,34 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 <p class="has-line-data" data-line-start="285" data-line-end="286">El código que lidia con esta parte es un poco extenso para ponerlo aquí, puedes verlo en el repositorio dando click [aqui]</p>
 <p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: [link]. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
+</div>
+  <div id="content-en">
+    <h1>My Blog Title (English)</h1>
+    <p>This is the blog article in English. You can replace this with your real text.</p>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("lang-toggle");
+    const enContent = document.getElementById("content-en");
+    const esContent = document.getElementById("content-es");
+
+    // Por defecto inglés activo
+    let currentLang = "en";
+
+    toggleBtn.addEventListener("click", () => {
+      if (currentLang === "en") {
+        enContent.style.display = "none";
+        esContent.style.display = "block";
+        toggleBtn.textContent = "English";
+        currentLang = "es";
+      } else {
+        enContent.style.display = "block";
+        esContent.style.display = "none";
+        toggleBtn.textContent = "Español";
+        currentLang = "en";
+      }
+    });
+  </script>
 
 </body>
 <style>
