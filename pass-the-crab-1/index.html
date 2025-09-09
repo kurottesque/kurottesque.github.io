@@ -287,25 +287,7 @@ p, li, blockquote, td, th, caption, label, .title, .title-document {
 a { color: #9adbd6; text-decoration: underline; }
 a:hover { color: #c6fff9; }
 
-/* ===== Bloques de código: oscuro, menos "flash" ===== */
-pre, pre code, code, .hljs, .preview-html pre, .preview-html code {
-  background-color: #0b0c10 !important;     /* oscuro suave */
-  color: #e6e6e9 !important;                /* texto claro en code */
-  border: 1px solid rgba(255,255,255,0.04) !important;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.6) inset;
-  border-radius: 8px !important;
-  transition: background-color .25s ease, color .25s ease, box-shadow .25s ease;
-  font-family: "SFMono-Regular", Menlo, Monaco, "Roboto Mono", monospace !important;
-  line-height: 1.6 !important;
-}
 
-/* Evitar blancos heredados de selectores específicos */
-pre[class], code[class], .pre-scrollable, .table .table {
-  background: #0b0c10 !important;
-  color: #e6e6e9 !important;
-}
-
-/* Reducir contraste brusco en inline code */
 
 /* Animaciones suaves para evitar 'flash' al hacer scroll */
 * { transition: color .12s ease, background-color .12s ease; }
