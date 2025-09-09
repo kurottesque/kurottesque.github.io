@@ -255,7 +255,8 @@ Y concatenamos su <em>class_name</em> en un solo string: <code>JD + Skew1 + GBG 
 </ul>
 <p class="has-line-data" data-line-start="283" data-line-end="284">Y ya con esto tenemos los NT hashes descifrados para todas las cuentas.</p>
     <p class="has-line-data" data-line-start="285" data-line-end="286">El código que lidia con esta parte es un poco extenso para ponerlo aquí, puedes verlo en el repositorio: <a href="https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202">https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202</a></p>
-<p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: [link]. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
+    <p class="has-line-data" data-line-start="287" data-line-end="288">El código completo de la herramienta que obtiene el SAM, el SYSTEM y desencripta las NT hashes puede ser descargado de aqui: <a href="https://github.com/kurottesque/crab-dump/">https://github.com/kurottesque/crab-dump/</a>. La mayoría de funcionalidades es una adaptación de el modulo SAMHashes de <code>secretsdump.py</code> de Impacket. Un agradecimiento a ellos por darse en la labor de encontrar las estructuras y procedimientos adecuados, de las que este blog depende.</p>
+<h2 class="code-line" data-line-start="288" data-line-end="289" ><a id="Conclusiones_0"></a>Conclusiones</h2>
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
 </div>
   <div id="content-en">
@@ -504,8 +505,8 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
 </ul>
 <p class="has-line-data" data-line-start="283" data-line-end="284">And that’s it, we now have the decrypted NT hashes for all accounts.</p>
     <img src="final.png"></img>
-<p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository: </p>
-<p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM, decrypts the NT hashes and print it on console, can be downloaded from [link]. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
+<p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository:<a href="https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202">https://github.com/kurottesque/crab-dump/blob/main/src/main.rs#L202</a><</p>
+<p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM, decrypts the NT hashes and print it on console, can be downloaded from <a href="https://github.com/kurottesque/crab-dump/">https://github.com/kurottesque/crab-dump/</a>. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
 
   </div>
