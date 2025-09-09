@@ -1,1 +1,0 @@
-# kurottesque.github.io
