@@ -455,7 +455,7 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
     #[allow(non_snake_case)]
     let F_data = F?.data().expect(&quot;Couldn't extract data&quot;);
 </code></pre>
-<p class="has-line-data" data-line-start="236" data-line-end="237">nside this value, starting at offset <code>0x68</code>, there is an attribute called <strong>Key0</strong>. This data is encrypted.</p>
+<p class="has-line-data" data-line-start="236" data-line-end="237">Inside this value, starting at offset <code>0x68</code>, there is an attribute called <strong>Key0</strong>. This data is encrypted.</p>
 <p class="has-line-data" data-line-start="238" data-line-end="239">We decrypt this using the <strong>BootKey</strong> as the master key, applying <strong>AES o RC4</strong> (depending on the Windows version. The result of this decryption is the <strong>SAM Key</strong>, which will then be used to decrypt the NT hashes of local accounts.</p>
 <pre><code class="has-line-data" data-line-start="240" data-line-end="264">    let mut sam_key: Vec&lt;u8&gt; = vec![];
     match F_data {
@@ -486,7 +486,7 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
 <p class="has-line-data" data-line-start="269" data-line-end="270">Each of these subkeys has a value <code>V</code> that contains the binary data of the user account. This binary blob includes values like the account name and the NT hash.</p>
 <p class="has-line-data" data-line-start="271" data-line-end="272">To decrypt the NT hash, the following process is used:</p>
 <ul>
-<li class="has-line-data" data-line-start="273" data-line-end="275">Extraer the <code>V</code> blob from the user subkey and locate the encrypted NT hash inside it.</li>
+<li class="has-line-data" data-line-start="273" data-line-end="275">Extract the <code>V</code> blob from the user subkey and locate the encrypted NT hash inside it.</li>
 </ul>
 <ul>
 <li class="has-line-data" data-line-start="275" data-line-end="277">
@@ -503,8 +503,9 @@ Concatenate their <em>class_name</em> values into a single string: <code>JD + Sk
 </li>
 </ul>
 <p class="has-line-data" data-line-start="283" data-line-end="284">And that’s it, we now have the decrypted NT hashes for all accounts.</p>
+    <img src="final.png"></img>
 <p class="has-line-data" data-line-start="285" data-line-end="286">The code handling this part is a bit long to include here, but you can check it out in the repository: </p>
-<p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM and decrypts the NT hashes, can be downloaded from [link]. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
+<p class="has-line-data" data-line-start="287" data-line-end="288">The complete tool, which extracts the SAM and SYSTEM, decrypts the NT hashes and print it on console, can be downloaded from [link]. Most of its functionality is an adaptation of the SAMHashes module from <code>secretsdump.py</code> in Impacket. Big thanks to them for figuring out the correct structures and procedures that this blog relies on.</p>
 <p class="has-line-data" data-line-start="289" data-line-end="290">Ya con los hashes NT podemos proceder a hacer el Pass-The-Hash, modificando la memoria del <code>LSASS</code>, de la que se hablará en la parte 2.</p>
 
   </div>
