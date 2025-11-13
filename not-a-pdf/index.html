@@ -15,7 +15,7 @@
 <p>El objetivo es simple, hacer que un archivo pdf ejecute codigo arbitrario. La forma mas h4ck3r es encontrando una vulnerabilidad en el parser PDF que permita ejecutar código. Lastimosamente es poco práctico, necesitamos saber el software especifíco que el usuario usa para leer pdfs (de los cuales muchas veces es el navegador), encontrar una vulnerabilidad en ese software y craftear el payload específico. Este camino requiere de habilidades propias de un equipo (o individuo) avanzados, así que tendremos que ir por otra ruta: engañar al usuario usando las características de Windows.</p>
 <p>Hablemos un poco de las extensiones de archivos. Windows usa las extensiones (.exe, .pdf, .png, .txt) para saber cómo interpretar un archivo.</p>
 <p>Por defecto, Windows te oculta las extensiones, un usuario arbitrario puede habilitar la opción de observar las extensiones desde el explorador de archivos</p>
-<img src="images/20251113110247.png">
+<img src="images/Pasted image 20251113110247.png">
 
 <p>Muchos usuarios ignoran esta opción; para ser honestos, la mayoría de usuarios de Windows no la tienen activada, no les podría importar menos ver las extensiones de sus archivos.</p>
 <p>Esto crea una ruta bastante jugosa de ataque: nombrar tu <code>virus.exe</code> a <code>virus.jpg.exe</code>. El usuario verá la primera extensión <code>virus.jpg</code> y no podrá ver la verdadera extensión </p>
